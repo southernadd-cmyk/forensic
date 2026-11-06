@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Response Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f5f2;
+  --surface: #ffffff;
+  --ink: #1c2430;
+  --muted: #5a6370;
+  --line: #cfd3cb;
+  --blue: #2453a6;
+  --blue-soft: #e4ebf7;
+  --red: #b8322a;
+  --red-soft: #f7e3e1;
+  --green: #2f7a4b;
+  --green-soft: #e2f1e7;
+  --amber: #8a5a00;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15191f;
+    --surface: #1d232b;
+    --ink: #e6e8ea;
+    --muted: #a3abb5;
+    --line: #39414b;
+    --blue: #8fb0f2;
+    --blue-soft: #22314a;
+    --red: #f08a7f;
+    --red-soft: #3d2423;
+    --green: #74c695;
+    --green-soft: #1f3528;
+    --amber: #e8b75c;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { font-size: 112.5%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+}
+main { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 .5rem; }
+h2 { font-size: 1.35rem; line-height: 1.25; margin: 2rem 0 .5rem; }
+h3 { font-size: 1.05rem; margin: 1.5rem 0 .4rem; }
+p { margin: 0 0 .9rem; max-width: 40em; }
+.muted { color: var(--muted); }
+a { color: var(--blue); }
+
+button, select, input {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: .45rem .9rem;
+}
+button.primary { background: var(--blue); border-color: var(--blue); color: var(--surface); font-weight: 700; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.small { padding: .15rem .5rem; font-size: .85rem; border-width: 1px; }
+button.link { border: 0; background: none; padding: 0; color: var(--blue); text-decoration: underline; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+input[type=text], select {
+  border: 2px solid var(--line);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: .4rem .6rem;
+}
+label { display: block; font-weight: 700; margin: .8rem 0 .25rem; }
+
+/* Home */
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.2rem 1.2rem; }
+.panel h2 { margin-top: 0; }
+.panel button.primary { margin-top: 1rem; }
+
+/* Run header: the incident clock is the one bold element */
+.runhead {
+  display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: .5rem 1.5rem;
+  border-bottom: 3px solid var(--ink); padding-bottom: .75rem; margin-bottom: 1rem;
+}
+.runhead h1 { font-size: 1.5rem; margin: 0; }
+.clock { text-align: right; }
+.clock .t {
+  font-size: 2.6rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+  color: var(--red);
+}
+.clock .l { font-size: .85rem; color: var(--muted); }
+
+.steps { display: flex; gap: .25rem; list-style: none; padding: 0; margin: 0 0 1.5rem; counter-reset: s; }
+.steps li {
+  flex: 1; font-size: .85rem; padding: .35rem .4rem; border-top: 4px solid var(--line); color: var(--muted);
+}
+.steps li.done { border-color: var(--green); color: var(--ink); }
+.steps li.now { border-color: var(--blue); color: var(--ink); font-weight: 700; }
+@media (max-width: 34rem) { .steps li span { display: none; } }
+
+.brief { background: var(--surface); border-left: 5px solid var(--red); padding: .8rem 1rem; margin-bottom: 1rem; }
+.brief p:last-child { margin-bottom: 0; }
+
+/* Ordered lists you can rearrange */
+ol.order { list-style: none; padding: 0; margin: .5rem 0 1rem; }
+ol.order li {
+  display: grid; grid-template-columns: 2rem 1fr auto; gap: .6rem; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: .5rem .6rem; margin-bottom: .4rem;
+}
+ol.order .n { font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+ol.order .ctrl { display: flex; gap: .25rem; flex-wrap: wrap; justify-content: end; }
+ol.order li.playstep { grid-template-columns: 2rem 1fr; }
+ol.order li.playstep .rowbottom { grid-column: 2; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+ol.order li.missing-owner select { border-color: var(--amber); }
+
+.pool { display: grid; gap: .4rem; margin: .5rem 0 1rem; }
+.pool button {
+  text-align: left; border: 1px dashed var(--muted); border-radius: 6px; background: transparent; padding: .5rem .7rem;
+}
+.pool button:hover { background: var(--surface); border-style: solid; }
+.empty { border: 2px dashed var(--line); border-radius: 6px; padding: 1rem; color: var(--muted); }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media (max-width: 46rem) { .cols { grid-template-columns: 1fr; } }
+.cols h2 { margin-top: .5rem; }
+
+.actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: 1rem; }
+
+/* Injects */
+.inject { background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 1rem 1.2rem; }
+.inject .when { font-weight: 700; color: var(--red); font-size: 1.2rem; }
+.timer { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: .6rem 0 1rem; }
+.timer div { height: 100%; background: var(--red); width: 100%; transition: width 1s linear; }
+@media (prefers-reduced-motion: reduce) { .timer div { transition: none; } }
+.choices { display: grid; gap: .5rem; }
+.choices button { text-align: left; border-width: 1px; }
+.choices button.best { background: var(--green-soft); border-color: var(--green); }
+.choices button.ok { background: var(--blue-soft); border-color: var(--blue); }
+.choices button.bad { background: var(--red-soft); border-color: var(--red); }
+.verdict { margin-top: 1rem; padding: .6rem .8rem; border-radius: 6px; background: var(--bg); }
+
+fieldset { border: 1px solid var(--line); border-radius: 8px; padding: .6rem 1rem 1rem; margin: 1rem 0; background: var(--surface); }
+legend { font-weight: 700; padding: 0 .3rem; }
+.opt { display: flex; gap: .6rem; align-items: start; font-weight: 400; margin: .5rem 0; cursor: pointer; }
+.opt input { margin-top: .3rem; width: 1.1rem; height: 1.1rem; flex: none; }
+
+/* Scorecard */
+.total { display: flex; align-items: baseline; gap: .6rem; margin: .5rem 0 1rem; }
+.total .big { font-size: 4rem; font-weight: 700; line-height: 1; }
+table { width: 100%; border-collapse: collapse; margin: .5rem 0 1rem; }
+th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .9rem; color: var(--muted); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ledger { list-style: none; padding: 0; margin: .3rem 0 1rem; }
+.ledger li { padding: .35rem 0 .35rem 1.2rem; position: relative; border-bottom: 1px solid var(--line); }
+.ledger li::before { content: ""; position: absolute; left: 0; top: .85rem; width: .55rem; height: .55rem; border-radius: 50%; background: var(--red); }
+.ledger li.good::before { background: var(--green); }
+.ledger .pts { font-weight: 700; color: var(--red); margin-right: .3rem; }
+.tag { font-size: .8rem; border: 1px solid var(--line); border-radius: 4px; padding: 0 .35rem; color: var(--muted); white-space: nowrap; }
+.notice { padding: .6rem .8rem; border-radius: 6px; background: var(--blue-soft); margin: 1rem 0; }
+
+.copyrow { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: .3rem 0; }
+.copyrow input { flex: 1; min-width: 14rem; font-size: .85rem; }
+
+.hidden { display: none !important; }
+@media print {
+  button, .copyrow, .noprint { display: none !important; }
+  body { background: #fff; color: #000; }
+}
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<script src="scenarios.js"></script>
+<script>
+"use strict";
+
+/* ---------- Small helpers ---------- */
+
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "text") el.textContent = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, "");
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+const app = document.getElementById("app");
+function render(...nodes) {
+  app.replaceChildren(...nodes);
+  window.scrollTo(0, 0);
+}
+
+function hashString(s) {
+  let x = 2166136261;
+  for (const c of s) { x ^= c.charCodeAt(0); x = Math.imul(x, 16777619); }
+  return x >>> 0;
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffle(list, rand) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function move(list, i, d) {
+  const j = i + d;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+}
+function ownerNames(ids) { return ids.map(id => OWNERS[id]).join(" or "); }
+function mmss(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+const params = new URLSearchParams(location.search);
+const STEP_NAMES = ["Order the lifecycle", "Build the playbook", "Handle injects", "Brief people", "Scorecard"];
+const INJECT_SECONDS = 45;
+
+/* ---------- Home ---------- */
+
+function home() {
+  const soloSelect = scenarioSelect("solo-scenario");
+  const nameIn = h("input", { type: "text", id: "solo-name", maxlength: "30", autocomplete: "off", style: "width:100%" });
+  const teachSelect = scenarioSelect("teach-scenario");
+  const teachOut = h("div");
+  const makeLink = () => {
+    const seed = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[b % 32]).join("");
+    const url = `${location.origin}${location.pathname}?incident=${teachSelect.value}&seed=${seed}`;
+    teachOut.replaceChildren(copyRow("Class link", url),
+      h("p", { class: "muted" }, "Everyone who opens this link gets the same incident with the cards in the same order, so their scores are comparable. Make a new link for each class."));
+  };
+
+  render(
+    h("h1", { text: "Incident Response Lab" }),
+    h("p", {}, "Run a security incident from the first alert to the final briefing. Put the response in order, build the playbook, decide under pressure, then tell the right people the right things."),
+    h("p", { class: "muted" }, "Every organisation, person and number here is invented. Takes about ten minutes. Nothing you do is saved or sent anywhere."),
+    h("div", { class: "panels" },
+      h("section", { class: "panel" },
+        h("h2", { text: "Start an incident" }),
+        h("label", { for: "solo-scenario", text: "Incident" }), soloSelect,
+        h("label", { for: "solo-name", text: "Your name (shown on your scorecard)" }), nameIn,
+        h("div", {}, h("button", { class: "primary", text: "Start",
+          onclick: () => startRun(soloSelect.value, null, nameIn.value.trim()) }))
+      ),
+      h("section", { class: "panel" },
+        h("h2", { text: "For teachers" }),
+        h("p", {}, "Make a link that gives the whole class the same incident in the same order."),
+        h("label", { for: "teach-scenario", text: "Incident" }), teachSelect,
+        h("div", {}, h("button", { class: "primary", text: "Make a class link", onclick: makeLink })),
+        teachOut
+      )
+    )
+  );
+}
+
+function sharedStart(incident, seed) {
+  const sc = SCENARIOS.find(s => s.id === incident);
+  if (!sc) { home(); return; }
+  const nameIn = h("input", { type: "text", id: "shared-name", maxlength: "30", autocomplete: "off", style: "width:100%" });
+  render(
+    h("h1", { text: "Incident Response Lab" }),
+    h("p", {}, "Your teacher has set up this incident for the class:"),
+    h("h2", { text: sc.title, style: "margin-top:0" }),
+    h("p", { class: "muted" }, "It takes about ten minutes. At the end you'll get a score out of 100 with an explanation of every mark lost."),
+    h("section", { class: "panel" },
+      h("label", { for: "shared-name", text: "Your name (shown on your scorecard)", style: "margin-top:0" }), nameIn,
+      h("div", {}, h("button", { class: "primary", text: "Start", onclick: () => startRun(sc.id, seed, nameIn.value.trim()) })))
+  );
+  nameIn.focus();
+}
+
+function scenarioSelect(id) {
+  const sel = h("select", { id });
+  for (const s of SCENARIOS) sel.append(h("option", { value: s.id, text: s.title }));
+  return sel;
+}
+
+function copyRow(label, value) {
+  const input = h("input", { type: "text", value, readonly: true, "aria-label": label });
+  const btn = h("button", { class: "small", text: "Copy", onclick: async () => {
+    try { await navigator.clipboard.writeText(value); btn.textContent = "Copied"; }
+    catch { input.select(); btn.textContent = "Press Ctrl+C"; }
+  }});
+  return h("div", {}, h("label", { text: label }), h("div", { class: "copyrow" }, input, btn));
+}
+
+/* ---------- A run ---------- */
+
+let run = null;
+
+function startRun(scenarioId, seedCode, name) {
+  const sc = SCENARIOS.find(s => s.id === scenarioId) || SCENARIOS[0];
+  // A class link carries a seed so everyone sees the same order; otherwise it's random.
+  const seed = seedCode ? hashString(seedCode + sc.id) : (Math.random() * 2 ** 32) >>> 0;
+  const rand = rng(seed);
+  let lifecycle;
+  do { lifecycle = shuffle([0, 1, 2, 3, 4], rand); } while (lifecycle.every((p, i) => p === i));
+  run = {
+    sc, seedCode, name, rand,
+    started: Date.now(),
+    step: 0,
+    clock: sc.clockStart,
+    lifecycle,
+    pool: shuffle([...sc.actions.map(a => a.id), ...sc.traps.map(t => t.id)], rand),
+    playbook: [],
+    injectOrder: sc.injects.map(inj => shuffle(inj.options.map((_, i) => i), rand)),
+    injectAnswers: [],
+    updateLines: shuffle(sc.update.lines.map((_, i) => i), rand),
+    updateAudiences: shuffle(sc.update.audiences.map((_, i) => i), rand),
+    audience: null,
+    chosenLines: new Set(),
+    result: {}
+  };
+  showStep();
+}
+
+function runHeader() {
+  return [
+    h("div", { class: "runhead" },
+      h("div", {},
+        h("p", { class: "muted", style: "margin:0" }, [run.name, run.seedCode ? "class link" : "practice run"].filter(Boolean).join(", ")),
+        h("h1", { text: run.sc.title })),
+      h("div", { class: "clock", "aria-live": "polite" },
+        h("div", { class: "t", text: run.clock }),
+        h("div", { class: "l", text: "incident time" }))
+    ),
+    h("ol", { class: "steps", "aria-label": "Progress" },
+      STEP_NAMES.map((n, i) => h("li", {
+        class: i < run.step ? "done" : i === run.step ? "now" : "",
+        "aria-current": i === run.step ? "step" : null
+      }, `${i + 1} `, h("span", { text: n })))
+    )
+  ];
+}
+
+function showStep() {
+  [stepLifecycle, stepPlaybook, stepInjects, stepUpdate, stepScore][run.step]();
+}
+function nextStep() { run.step++; showStep(); }
+
+function briefBox() {
+  return h("div", { class: "brief" },
+    h("p", { text: run.sc.brief }),
+    h("p", {}, h("strong", { text: "Your goal: " }), run.sc.goal));
+}
+
+/* Step 1: lifecycle */
+function stepLifecycle() {
+  const list = h("ol", { class: "order" });
+  const shift = (i, d) => {
+    move(run.lifecycle, i, d);
+    draw();
+    const row = list.children[i + d];
+    const btns = row.querySelectorAll("button");
+    const target = d < 0 ? btns[0] : btns[1];
+    (target.disabled ? (d < 0 ? btns[1] : btns[0]) : target).focus();
+  };
+  const draw = () => {
+    list.replaceChildren(...run.lifecycle.map((p, i) => h("li", {},
+      h("span", { class: "n", text: i + 1 }),
+      h("span", { text: PHASES[p] }),
+      h("span", { class: "ctrl" },
+        h("button", { class: "small", text: "Up", "aria-label": `Move ${PHASES[p]} up`, disabled: i === 0, onclick: () => shift(i, -1) }),
+        h("button", { class: "small", text: "Down", "aria-label": `Move ${PHASES[p]} down`, disabled: i === 4, onclick: () => shift(i, 1) })
+      ))));
+  };
+  draw();
+  render(...runHeader(), briefBox(),
+    h("h2", { text: "Put the response phases in order" }),
+    h("p", {}, "These are the five phases of handling an incident, shuffled. Arrange them in the order you'd run them. Preparation happens before an incident, so it isn't here."),
+    list,
+    h("div", { class: "actions" },
+      h("button", { class: "primary", text: "Lock in this order", onclick: () => {
+        const wrong = run.lifecycle.filter((p, i) => p !== i).length;
+        run.result.lifecycle = {
+          score: Math.max(0, 10 - wrong * 2), max: 10,
+          ledger: wrong
+            ? [{ pts: -wrong * 2, text: `${wrong} phase${wrong > 1 ? "s were" : " was"} out of place. The order is identify, contain, eradicate, recover, then lessons learned.` }]
+            : [{ pts: 0, good: true, text: "All five phases in the right order." }]
+        };
+        nextStep();
+      }}))
+  );
+}
+
+/* Step 2: playbook */
+function findItem(id) {
+  return run.sc.actions.find(a => a.id === id) || run.sc.traps.find(t => t.id === id);
+}
+
+function stepPlaybook() {
+  const poolBox = h("div", { class: "pool" });
+  const bookBox = h("ol", { class: "order" });
+  const runBtn = h("button", { class: "primary", text: "Run the playbook" });
+  const note = h("p", { class: "muted", "aria-live": "polite" });
+
+  const ownerSelect = (step) => {
+    const sel = h("select", { "aria-label": "Owner", onchange: () => { step.owner = sel.value || null; draw(); } },
+      h("option", { value: "", text: "Choose an owner" }),
+      Object.entries(OWNERS).map(([k, v]) => h("option", { value: k, text: v, selected: step.owner === k })));
+    return sel;
+  };
+
+  const draw = () => {
+    const inBook = new Set(run.playbook.map(s => s.id));
+    const left = run.pool.filter(id => !inBook.has(id));
+    poolBox.replaceChildren(...(left.length ? left.map(id => h("button", {
+      text: findItem(id).text,
+      onclick: () => { run.playbook.push({ id, owner: null }); draw(); }
+    })) : [h("p", { class: "empty", text: "You've used every card." })]));
+
+    bookBox.replaceChildren(...(run.playbook.length ? run.playbook.map((step, i) => h("li", {
+      class: "playstep" + (step.owner ? "" : " missing-owner")
+    },
+      h("span", { class: "n", text: i + 1 }),
+      h("span", { text: findItem(step.id).text }),
+      h("div", { class: "rowbottom" },
+        ownerSelect(step),
+        h("span", { class: "ctrl" },
+          h("button", { class: "small", text: "Up", disabled: i === 0, onclick: () => { move(run.playbook, i, -1); draw(); } }),
+          h("button", { class: "small", text: "Down", disabled: i === run.playbook.length - 1, onclick: () => { move(run.playbook, i, 1); draw(); } }),
+          h("button", { class: "small", text: "Remove", onclick: () => { run.playbook.splice(i, 1); draw(); } })
+        ))
+    )) : [h("li", { class: "empty", style: "display:block" }, "Your playbook is empty. Add steps from the action cards.")]));
+
+    const noOwner = run.playbook.filter(s => !s.owner).length;
+    runBtn.disabled = run.playbook.length === 0 || noOwner > 0;
+    note.textContent = run.playbook.length === 0 ? "" :
+      noOwner ? `${noOwner} step${noOwner > 1 ? "s need" : " needs"} an owner before you can run the playbook.` :
+      `${run.playbook.length} steps, all owned.`;
+  };
+
+  runBtn.addEventListener("click", () => { scorePlaybook(); nextStep(); });
+  draw();
+
+  render(...runHeader(), briefBox(),
+    h("h2", { text: "Build the playbook" }),
+    h("p", {}, "Add the steps you'd take, put them in order and give each one an owner. Some cards are traps that make things worse. Leave those out."),
+    h("div", { class: "cols" },
+      h("section", {}, h("h3", { text: "Action cards" }), poolBox),
+      h("section", {}, h("h3", { text: "Your playbook" }), bookBox, note,
+        h("div", { class: "actions" }, runBtn)))
+  );
+}
+
+function scorePlaybook() {
+  const sc = run.sc;
+  const pos = new Map(run.playbook.map((s, i) => [s.id, i]));
+  const ledger = [];
+  let pb = 40;
+
+  for (const t of sc.traps) {
+    if (pos.has(t.id)) { pb -= 10; ledger.push({ pts: -10, text: `Trap: "${t.text}". ${t.why}` }); }
+  }
+  for (const a of sc.actions) {
+    if (!pos.has(a.id)) { pb -= 4; ledger.push({ pts: -4, text: `Missing: "${a.text}".` }); continue; }
+    for (const [dep, why] of a.after || []) {
+      if (pos.has(dep) && pos.get(dep) > pos.get(a.id)) {
+        pb -= 3;
+        ledger.push({ pts: -3, text: `Too early: "${a.text}" came before "${findItem(dep).text}". ${why}` });
+      }
+    }
+  }
+  if (!ledger.length) ledger.push({ pts: 0, good: true, text: "Every step present, in a safe order, with no traps." });
+  run.result.playbook = { score: Math.max(0, pb), max: 40, ledger };
+
+  const oLedger = [];
+  let right = 0;
+  for (const a of sc.actions) {
+    const step = run.playbook.find(s => s.id === a.id);
+    if (!step) continue;
+    if (a.owner.includes(step.owner)) right++;
+    else oLedger.push({ pts: null, text: `"${a.text}" belongs with ${ownerNames(a.owner)}, not ${OWNERS[step.owner]}.` });
+  }
+  const missing = sc.actions.filter(a => !pos.has(a.id)).length;
+  if (missing) oLedger.push({ pts: null, text: `${missing} required step${missing > 1 ? "s were" : " was"} missing, so had no owner.` });
+  const oScore = Math.round(10 * right / sc.actions.length);
+  if (!oLedger.length) oLedger.push({ pts: 0, good: true, text: "Every step had the right owner." });
+  else oLedger.unshift({ pts: oScore - 10, text: `${right} of ${sc.actions.length} steps had the right owner.` });
+  run.result.owners = { score: oScore, max: 10, ledger: oLedger };
+}
+
+/* Step 3: injects */
+function stepInjects() { showInject(0); }
+
+function showInject(n) {
+  const inj = run.sc.injects[n];
+  run.clock = inj.time;
+  let timeLeft = INJECT_SECONDS;
+  let answered = false;
+  const bar = h("div");
+  const timeText = h("p", { class: "muted", "aria-live": "off", text: `${timeLeft} seconds` });
+  const verdict = h("div");
+  const buttons = run.injectOrder[n].map(i => h("button", { text: inj.options[i].text, onclick: () => answer(i) }));
+
+  const tick = setInterval(() => {
+    timeLeft--;
+    bar.style.width = `${(timeLeft / INJECT_SECONDS) * 100}%`;
+    timeText.textContent = `${timeLeft} seconds`;
+    if (timeLeft <= 0) answer(null);
+  }, 1000);
+
+  function answer(i) {
+    if (answered) return;
+    answered = true;
+    clearInterval(tick);
+    const best = inj.options.reduce((b, o, k) => o.score > inj.options[b].score ? k : b, 0);
+    run.injectAnswers[n] = i;
+    run.injectOrder[n].forEach((k, j) => {
+      const b = buttons[j];
+      b.disabled = true;
+      const sc = inj.options[k].score;
+      if (k === i || k === best) b.classList.add(sc === 10 ? "best" : sc > 0 ? "ok" : "bad");
+    });
+    const last = n === run.sc.injects.length - 1;
+    verdict.replaceChildren(h("div", { class: "verdict", role: "status" },
+      h("p", {}, h("strong", { text: i === null ? "Out of time. " : inj.options[i].score === 10 ? "Good call. " : inj.options[i].score > 0 ? "Acceptable. " : "Wrong call. " }),
+        i === null ? "No decision is a decision, and it scores as a wrong call." : inj.options[i].why),
+      i !== best ? h("p", { class: "muted" }, "Best call: ", inj.options[best].text, ". ", inj.options[best].why) : null,
+      h("div", { class: "actions" }, h("button", { class: "primary", text: last ? "Brief people" : "Next inject",
+        onclick: () => {
+          if (last) { scoreInjects(); nextStep(); } else showInject(n + 1);
+        } }))
+    ));
+    verdict.querySelector("button.primary").focus();
+  }
+
+  render(...runHeader(),
+    h("h2", { text: `Inject ${n + 1} of ${run.sc.injects.length}` }),
+    h("p", { class: "muted" }, "New information has arrived. Decide before the clock runs out."),
+    h("div", { class: "inject" },
+      h("div", { class: "when", text: inj.time }),
+      h("p", { text: inj.text, style: "font-size:1.1rem" }),
+      h("div", { class: "timer", role: "presentation" }, bar), timeText,
+      h("div", { class: "choices" }, buttons),
+      verdict)
+  );
+  buttons[0].focus();
+}
+
+function scoreInjects() {
+  let total = 0;
+  const ledger = run.sc.injects.map((inj, n) => {
+    const i = run.injectAnswers[n];
+    const s = i === null || i === undefined ? 0 : inj.options[i].score;
+    total += s;
+    return { pts: s - 10, good: s === 10,
+      text: `${inj.time}: ${i === null || i === undefined ? "ran out of time" : `"${inj.options[i].text}"`}. ${i === null || i === undefined ? "" : inj.options[i].why}` };
+  });
+  run.result.decisions = { score: total, max: run.sc.injects.length * 10, ledger };
+}
+
+/* Step 4: stakeholder update */
+function stepUpdate() {
+  const u = run.sc.update;
+  const sendBtn = h("button", { class: "primary", text: "Send the update", disabled: true });
+  const refresh = () => { sendBtn.disabled = run.audience === null || run.chosenLines.size === 0; };
+
+  const audienceSet = h("fieldset", {}, h("legend", { text: "Who is this update for?" }),
+    run.updateAudiences.map(i => h("label", { class: "opt" },
+      h("input", { type: "radio", name: "aud", value: i, onchange: () => { run.audience = i; refresh(); } }),
+      h("span", { text: u.audiences[i].text }))));
+  const linesSet = h("fieldset", {}, h("legend", { text: "What goes in it? Tick every line you'd include." }),
+    run.updateLines.map(i => h("label", { class: "opt" },
+      h("input", { type: "checkbox", onchange: e => { e.target.checked ? run.chosenLines.add(i) : run.chosenLines.delete(i); refresh(); } }),
+      h("span", { text: u.lines[i].text }))));
+
+  sendBtn.addEventListener("click", () => {
+    const ledger = [];
+    let s = 20;
+    const aud = u.audiences[run.audience];
+    if (!aud.correct) {
+      s -= 5;
+      ledger.push({ pts: -5, text: `Wrong audience. This update is for: ${u.audiences.find(a => a.correct).text.toLowerCase()}.` });
+    }
+    u.lines.forEach((l, i) => {
+      const picked = run.chosenLines.has(i);
+      if (picked && !l.correct) { s -= 5; ledger.push({ pts: -5, text: `Shouldn't say: "${l.text}".` }); }
+      if (!picked && l.correct) { s -= 5; ledger.push({ pts: -5, text: `Left out: "${l.text}".` }); }
+    });
+    if (!ledger.length) ledger.push({ pts: 0, good: true, text: "Right audience, and exactly the right things to say." });
+    run.result.update = { score: Math.max(0, s), max: 20, ledger };
+    nextStep();
+  });
+
+  render(...runHeader(),
+    h("h2", { text: "Brief the people affected" }),
+    h("p", {}, "The technical work is under way. Now someone has to be told what's happening. Choose who, then choose what to say. Good updates are accurate, say what you're doing, and tell people what to do next."),
+    audienceSet, linesSet,
+    h("div", { class: "actions" }, sendBtn)
+  );
+}
+
+/* Step 5: scorecard */
+function stepScore() {
+  const r = run.result;
+  const sections = [
+    ["lifecycle", "Lifecycle order"], ["playbook", "Playbook"], ["owners", "Owners"],
+    ["decisions", "Inject decisions"], ["update", "Stakeholder update"]
+  ];
+  const total = sections.reduce((t, [k]) => t + r[k].score, 0);
+  const elapsed = Date.now() - run.started;
+  const correct = run.sc.actions.slice().sort((a, b) => a.phase - b.phase);
+  render(...runHeader(),
+    h("h2", { text: "Scorecard" }),
+    h("div", { class: "total" }, h("span", { class: "big", text: total }), h("span", { class: "muted", text: `out of 100, in ${mmss(elapsed)}` })),
+    h("p", { class: "notice" }, run.name ? `${run.name}, show this score to your teacher or take a screenshot.` : "Show this score to your teacher or take a screenshot."),
+    h("div", { class: "wrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, h("th", { text: "Section" }), h("th", { class: "num", text: "Score" }))),
+      h("tbody", {}, sections.map(([k, label]) => h("tr", {},
+        h("td", { text: label }), h("td", { class: "num", text: `${r[k].score} / ${r[k].max}` })))))),
+    sections.map(([k, label]) => [
+      h("h3", { text: label }),
+      h("ul", { class: "ledger" }, r[k].ledger.map(l => h("li", { class: l.good ? "good" : "" },
+        l.pts ? h("span", { class: "pts", text: l.pts }) : null, l.text)))
+    ]),
+    h("h2", { text: "A model playbook" }),
+    h("p", { class: "muted" }, "One safe order. Real incidents overlap, and some steps can run in parallel, but anything that depends on another step has to come after it."),
+    h("div", { class: "wrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, h("th", { text: "Step" }), h("th", { text: "Phase" }), h("th", { text: "Owner" }))),
+      h("tbody", {}, correct.map(a => h("tr", {},
+        h("td", { text: a.text }), h("td", { text: PHASES[a.phase] }), h("td", { text: ownerNames(a.owner) })))))),
+    h("div", { class: "actions noprint" },
+      h("button", { class: "primary", text: "Try this incident again", onclick: () => startRun(run.sc.id, null, run.name) }),
+      h("button", { text: "Choose another incident", onclick: () => { history.replaceState(null, "", location.pathname); home(); } }),
+      h("button", { text: "Print this scorecard", onclick: () => window.print() }))
+  );
+}
+
+/* ---------- Start ---------- */
+
+if (params.get("incident")) sharedStart(params.get("incident"), (params.get("seed") || "").slice(0, 12));
+else home();
+</script>
+</body>
+</html>
